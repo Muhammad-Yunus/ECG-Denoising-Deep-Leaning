@@ -1,0 +1,2 @@
+      Time     Sample #  Type  Sub Chan  Num	Aux
+[22:53:47.268]  2606817     +    0    0    0	(N
