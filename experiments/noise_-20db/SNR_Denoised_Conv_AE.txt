@@ -1,0 +1,12 @@
+------ SNR Denoised Signal ConvAE------
+
+Sample 0 	 : SNR 20.4042 db
+Sample 3306 	 : SNR 14.1053 db
+Sample 6612 	 : SNR 24.3825 db
+Sample 9918 	 : SNR 24.3213 db
+Sample 13224 	 : SNR 15.3638 db
+Sample 16530 	 : SNR 27.8121 db
+Sample 19836 	 : SNR 20.9258 db
+Sample 23142 	 : SNR 16.0322 db
+Sample 26448 	 : SNR 20.2063 db
+Sample 29754 	 : SNR 19.1574 db

@@ -1,0 +1,12 @@
+------ SNR Denoised Signal LSTM AE------
+
+Sample 0 	 : SNR -1.4156 db
+Sample 3306 	 : SNR -3.3953 db
+Sample 6612 	 : SNR 6.3146 db
+Sample 9918 	 : SNR 10.9604 db
+Sample 13224 	 : SNR -0.0936 db
+Sample 16530 	 : SNR -0.3425 db
+Sample 19836 	 : SNR 2.3782 db
+Sample 23142 	 : SNR -1.5424 db
+Sample 26448 	 : SNR 1.1216 db
+Sample 29754 	 : SNR 1.7169 db

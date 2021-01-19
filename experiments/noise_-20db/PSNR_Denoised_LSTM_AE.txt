@@ -1,0 +1,12 @@
+------ PSNR Noised Signal LSTM AE------
+
+Sample 0 	 : PSNR 13.4669 db
+Sample 3306 	 : PSNR 20.9902 db
+Sample 6612 	 : PSNR 15.7561 db
+Sample 9918 	 : PSNR 11.2876 db
+Sample 13224 	 : PSNR 24.2533 db
+Sample 16530 	 : PSNR 5.7673 db
+Sample 19836 	 : PSNR 20.6519 db
+Sample 23142 	 : PSNR 22.8011 db
+Sample 26448 	 : PSNR 19.0386 db
+Sample 29754 	 : PSNR 22.7383 db

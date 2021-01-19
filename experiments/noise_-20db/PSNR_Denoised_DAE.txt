@@ -1,0 +1,13 @@
+
+------ PSNR Noised Signal DAE------
+
+Sample 0 	 : PSNR 21.3498 db
+Sample 3306 	 : PSNR 29.0981 db
+Sample 6612 	 : PSNR 23.3846 db
+Sample 9918 	 : PSNR 19.2160 db
+Sample 13224 	 : PSNR 29.9765 db
+Sample 16530 	 : PSNR 14.6312 db
+Sample 19836 	 : PSNR 25.8201 db
+Sample 23142 	 : PSNR 28.8890 db
+Sample 26448 	 : PSNR 26.2748 db
+Sample 29754 	 : PSNR 29.6876 db

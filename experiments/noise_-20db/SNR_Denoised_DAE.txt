@@ -1,0 +1,12 @@
+------ SNR Denoised Signal DAE------
+
+Sample 0 	 : SNR 14.0432 db
+Sample 3306 	 : SNR 10.8409 db
+Sample 6612 	 : SNR 23.6905 db
+Sample 9918 	 : SNR 23.5550 db
+Sample 13224 	 : SNR 12.9169 db
+Sample 16530 	 : SNR 18.8956 db
+Sample 19836 	 : SNR 12.9127 db
+Sample 23142 	 : SNR 11.0584 db
+Sample 26448 	 : SNR 19.5484 db
+Sample 29754 	 : SNR 19.1625 db

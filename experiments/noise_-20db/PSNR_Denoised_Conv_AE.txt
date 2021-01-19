@@ -1,0 +1,12 @@
+------ PSNR Noised Signal ConvAE------
+
+Sample 0 	 : PSNR 22.1610 db
+Sample 3306 	 : PSNR 29.4413 db
+Sample 6612 	 : PSNR 22.6039 db
+Sample 9918 	 : PSNR 17.9308 db
+Sample 13224 	 : PSNR 30.2259 db
+Sample 16530 	 : PSNR 14.8577 db
+Sample 19836 	 : PSNR 26.3727 db
+Sample 23142 	 : PSNR 29.6672 db
+Sample 26448 	 : PSNR 25.8446 db
+Sample 29754 	 : PSNR 28.9140 db

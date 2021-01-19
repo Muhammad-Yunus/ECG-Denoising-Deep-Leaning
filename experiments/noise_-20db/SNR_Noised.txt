@@ -1,0 +1,12 @@
+------ SNR Noised Signal ------
+
+Sample 0 	 : SNR 6.7092 db
+Sample 3306 	 : SNR 1.4988 db
+Sample 6612 	 : SNR 10.1230 db
+Sample 9918 	 : SNR 13.5111 db
+Sample 13224 	 : SNR 3.1467 db
+Sample 16530 	 : SNR 11.1576 db
+Sample 19836 	 : SNR 6.8607 db
+Sample 23142 	 : SNR 3.0478 db
+Sample 26448 	 : SNR 6.7350 db
+Sample 29754 	 : SNR 5.6089 db
