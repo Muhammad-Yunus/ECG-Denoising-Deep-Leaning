@@ -7,3 +7,5 @@ dataset/train_all.csv
 dataset/train_all_Conv_AE.csv
 dataset/train_all_Deep_AE.csv
 dataset/train_all_LSTM_AE.csv
+dataset/test_all-v2.csv
+dataset/train_all-v2.csv
