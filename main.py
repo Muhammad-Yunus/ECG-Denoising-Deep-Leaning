@@ -1052,50 +1052,50 @@ if __name__ == "__main__" :
         "08455" : [1, None, None, ';'], #90
     }
     
-#     print("============================ *** ============================")
-#     print("=                 PREPROCESSING DATASET AFDB                =") 
-#     print("============================ *** ============================")
-#     for record in records :
-#         print("[INFO] processing recod %s..." % record)
-#         start = records[record][0]
-#         stop = records[record][1]
-#         separator = records[record][3]
-#         preprocessing_AFDB(record, start=start, stop=stop, sep=separator, fs=250)
+    print("============================ *** ============================")
+    print("=                 PREPROCESSING DATASET AFDB                =") 
+    print("============================ *** ============================")
+    for record in records :
+        print("[INFO] processing recod %s..." % record)
+        start = records[record][0]
+        stop = records[record][1]
+        separator = records[record][3]
+        preprocessing_AFDB(record, start=start, stop=stop, sep=separator, fs=250)
      
-#     print("============================ *** ============================")
-#     print("=                PREPROCESSING DATASET NSRDB                =") 
-#     print("============================ *** ============================")
-#     nsrdb_dir = os.listdir("dataset/NSRDB")
-#     for record in nsrdb_dir :
-#         print("[INFO] processing recod %s..." % record)
-#         preprocessing_NSRDB(record)
+    print("============================ *** ============================")
+    print("=                PREPROCESSING DATASET NSRDB                =") 
+    print("============================ *** ============================")
+    nsrdb_dir = os.listdir("dataset/NSRDB")
+    for record in nsrdb_dir :
+        print("[INFO] processing recod %s..." % record)
+        preprocessing_NSRDB(record)
         
     
-#     print("============================ *** ============================")
-#     print("=               BALANCING PER-RECORD DATASET                =") 
-#     print("============================ *** ============================")
-#     for record in records :
-#         n_samples = records[record][2]
-#         print("[INFO] balancing dataset recod %s..." % record)
-#         balancing_dataset(record, n_samples)
+    print("============================ *** ============================")
+    print("=               BALANCING PER-RECORD DATASET                =") 
+    print("============================ *** ============================")
+    for record in records :
+        n_samples = records[record][2]
+        print("[INFO] balancing dataset recod %s..." % record)
+        balancing_dataset(record, n_samples)
 
 
-#     print("============================ *** ============================")    
-#     print("=                      MERGING DATASET                      =") 
-#     print("============================ *** ============================") 
-#     merging_dataset(n_samples=30000)
+    print("============================ *** ============================")    
+    print("=                      MERGING DATASET                      =") 
+    print("============================ *** ============================") 
+    merging_dataset(n_samples=30000)
     
     
-#     print("============================ *** ============================") 
-#     print("=                         DENOISING                         =") 
-#     print("============================ *** ============================") 
-#     denoising()
+    print("============================ *** ============================") 
+    print("=                         DENOISING                         =") 
+    print("============================ *** ============================") 
+    denoising()
 
     
     print("============================ *** ============================") 
     print("=                      CLASSIFICATION                       =") 
     print("============================ *** ============================") 
     # isi dengan 'deep_ae', 'conv_ae', 'lstm_ae' untuk memilih sumber dataset dari hasil denoising tsb.
-#    classification(denoised = 'deep_ae', EPOCHS = 16, BATCH_SIZE = 128)
-    classification(denoised = 'conv_ae', EPOCHS = 1, BATCH_SIZE = 128)
-#     classification(denoised = 'lstm_ae', EPOCHS = 16, BATCH_SIZE = 128)
+    classification(denoised = 'deep_ae', EPOCHS = 16, BATCH_SIZE = 128)
+    classification(denoised = 'conv_ae', EPOCHS = 16, BATCH_SIZE = 128)
+    classification(denoised = 'lstm_ae', EPOCHS = 16, BATCH_SIZE = 128)
