@@ -6,6 +6,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import datetime
 import os
+import shutil
 
 import padasip as pa
 from padasip.filters import AdaptiveFilter
@@ -61,7 +62,7 @@ def preprocessing_AFDB(record, start=1, stop=None, sep=",", fs=250):
     # - concate datafarame
     list_df_ecg = []
     for name in csv_filenames:
-        df = read_csv_to_df(name, dataset_dir)
+        df = read_csv_to_df(name, dataset_dir, sep=sep)
         list_df_ecg.append(df)
 
     df_ecg = pd.concat(list_df_ecg)
@@ -142,28 +143,30 @@ def preprocessing_AFDB(record, start=1, stop=None, sep=",", fs=250):
     for time_interval in time_interval_N :
         for time_intv in list(zip(time_interval, time_interval[1:])):
             X = df_ecg.between_time(time_intv[0].time(), time_intv[1].time())
-            ecg1 = X['ECG1'].values
-            ecg2 = X['ECG2'].values
+            if len(X) > 0 and (X.index[-1] - X.index[0]).total_seconds() >= 16 :
+                ecg1 = X['ECG1'].values
+                ecg2 = X['ECG2'].values
 
-            if len(ecg1) > 0 and len(ecg2) > 0:
-                ALS1 = ecg1 - baseline_als(ecg1)
-                ALS2 = ecg2 - baseline_als(ecg2)
+                if len(ecg1) > 0 and len(ecg2) > 0:
+                    ALS1 = ecg1 - baseline_als(ecg1)
+                    ALS2 = ecg2 - baseline_als(ecg2)
 
-                ECG_ALS.append(np.array([ALS1, ALS2]))
-                ECG_ALS_label.append('N')
+                    ECG_ALS.append(np.array([ALS1, ALS2]))
+                    ECG_ALS_label.append('N')
 
     for time_interval in time_interval_AFIB :
         for time_intv in list(zip(time_interval, time_interval[1:])):
             X = df_ecg.between_time(time_intv[0].time(), time_intv[1].time())
-            ecg1 = X['ECG1'].values
-            ecg2 = X['ECG2'].values
+            if len(X) > 0 and (X.index[-1] - X.index[0]).total_seconds() >= 16 :
+                ecg1 = X['ECG1'].values
+                ecg2 = X['ECG2'].values
 
-            if len(ecg1) > 0 and len(ecg2) > 0:
-                ALS1 = ecg1 - baseline_als(ecg1)
-                ALS2 = ecg2 - baseline_als(ecg2)
+                if len(ecg1) > 0 and len(ecg2) > 0:
+                    ALS1 = ecg1 - baseline_als(ecg1)
+                    ALS2 = ecg2 - baseline_als(ecg2)
 
-                ECG_ALS.append(np.array([ALS1, ALS2]))
-                ECG_ALS_label.append('AF')
+                    ECG_ALS.append(np.array([ALS1, ALS2]))
+                    ECG_ALS_label.append('AF')
 
 
     print("[INFO] Signal Normalization...")
@@ -234,6 +237,170 @@ def preprocessing_AFDB(record, start=1, stop=None, sep=",", fs=250):
 
     print("-------------------------- *** --------------------------\n\n")
 
+def preprocessing_NSRDB(record, fs = 128):
+    dataset_dir = "dataset/NSRDB/%s/" % record 
+    
+    csv_filenames = []
+    for filename in os.listdir(dataset_dir) :
+        if filename.find(".csv") > -1:
+            csv_filenames.append(filename)
+    print("[INFO] detected CSV file :", csv_filenames)
+            
+    print("[INFO] Read CSV...")
+    def read_csv_to_df(filename, folder, sep=","):
+        df = pd.read_csv(folder + filename, sep=sep)
+        print("[INFO] finish read file - %s" % filename)
+
+        #df = df.drop(0) 
+        df.columns = ['Time', 'ECG1', 'ECG2']
+
+        df['ECG1'] = pd.to_numeric(df['ECG1'])
+        df['ECG2'] = pd.to_numeric(df['ECG2'])
+
+        # peak reduction
+        df[df['ECG1'] > 2] = 2
+        df[df['ECG1'] < -2] = -2
+        df[df['ECG2'] > 2] = 2
+        df[df['ECG2'] < -2] = -2
+        print("[INFO] finish data cleansing - %s" % filename)
+
+        df["Time"] = df['Time'].str.replace("[", "")
+        df["Time"] = df['Time'].str.replace("]", "")
+        df["Time"] = df['Time'].str.replace("'", "")
+
+        df["Time"] = pd.to_datetime(df["Time"], errors='coerce')
+        print("[INFO] finish time cleansing -  %s" % filename)
+
+        df.set_index("Time", inplace=True)
+        return df
+    
+    list_df_ecg = []
+    for name in csv_filenames:
+        df = read_csv_to_df(name, dataset_dir)
+        list_df_ecg.append(df)
+
+    df_ecg = pd.concat(list_df_ecg)
+
+    print("[INFO] Split per-16s & apply Baseline Wander Removal")
+    from scipy import sparse
+    from scipy.sparse.linalg import spsolve
+    from datetime import timedelta
+    
+    def baseline_als(y, lam=10000, p=0.05, n_iter=10):
+        L = len(y)
+        D = sparse.diags([1,-2,1],[0,-1,-2], shape=(L,L-2))
+        w = np.ones(L)
+        for i in range(n_iter):
+            W = sparse.spdiags(w, 0, L, L)
+            Z = W + lam * D.dot(D.transpose())
+            z = spsolve(Z, w*y)
+            w = p * (y > z) + (1-p) * (y < z)
+        return z
+    
+    def perdelta(start, end, delta):
+        curr = start
+        while curr < end:
+            yield curr
+            curr += delta
+            
+    time_interval = []
+    if len(df_ecg) > 0:
+        intr = [time_result for time_result in perdelta(df_ecg.index[0], df_ecg.index[-1], timedelta(seconds=16))]
+        time_interval.append(intr)
+        
+    ECG_ALS = []
+    ECG_ALS_label = []
+
+    for tm_int in time_interval :
+        for time_intv in list(zip(tm_int, tm_int[1:])):
+            X = df_ecg.between_time(time_intv[0].time(), time_intv[1].time())
+            if len(X) > 0 and (X.index[-1] - X.index[0]).total_seconds() >= 16 :
+                ecg1 = X['ECG1'].values
+                ecg2 = X['ECG2'].values
+
+                if len(ecg1) > 0 and len(ecg2) > 0:
+                    ALS1 = ecg1 - baseline_als(ecg1)
+                    ALS2 = ecg2 - baseline_als(ecg2)
+
+                    ECG_ALS.append(np.array([ALS1, ALS2]))
+                    ECG_ALS_label.append('N')
+                
+    print("[INFO] Signal Normalization...")
+    from sklearn.preprocessing import MaxAbsScaler, MinMaxScaler
+    scaler = MaxAbsScaler()
+    ECG_ALS_Norm = []
+
+    for als in ECG_ALS :
+        als1 = np.expand_dims(als[0], 1)
+        als2 = np.expand_dims(als[1], 1)
+
+        scaler.fit(als1)
+
+        als_norm1 = scaler.transform(als1)
+        als_norm2 = scaler.transform(als2)
+
+        ECG_ALS_Norm.append([als_norm1, als_norm2])
+        
+    print("[INFO] upsampling signal to 250Hz ...")
+    def upsampling_twice(data):
+        # upsampling interpolation
+        result = np.zeros(2*len(data)-1)
+        result[0::2] = data
+        result[1::2] = (data[1:] + data[:-1]) / 2
+        return result
+    
+    new_fs = 250 # Hz 
+    ECG_ALS_Norm_Up = []
+    for data in ECG_ALS_Norm :
+        data1 = np.array(data[0][:,0])
+        data2 = np.array(data[1][:,0])
+        data1 = upsampling_twice(data1) 
+        data2 = upsampling_twice(data2) 
+        ECG_ALS_Norm_Up.append([data1, data2])
+        
+    print("[INFO] R-R peak detection & split ...")
+    from ecgdetectors import Detectors
+    detectors = Detectors(new_fs)
+    
+    ECG_split = []
+    ECG_split_label = []
+    for i in range(len(ECG_ALS_Norm_Up)) :
+        data = np.array(ECG_ALS_Norm_Up[i])
+        if len(data) > 0:
+            r_peaks = []
+            try :
+                r_peaks = detectors.christov_detector(data[0])
+            except :
+                print("cannot find R peaks in ALS Norm, idx %d" % i)
+            RRs = np.diff(r_peaks)
+            RRs_med = np.median(RRs)
+            if not np.isnan(RRs_med) and RRs_med > 0:
+                for rp in r_peaks :
+                    split1 = data[0][rp : rp + int(RRs_med * 1.2)] 
+                    split2 = data[1][rp : rp + int(RRs_med * 1.2)] 
+
+                    n1 = len(split1) if len(split1) <= 300 else 300
+                    n2 = len(split2) if len(split2) <= 300 else 300
+                    pad1 = np.zeros(300)
+                    pad2 = np.copy(pad1)
+                    pad1[0:n1] = split1[0:n1]
+                    pad2[0:n2] = split2[0:n2]
+                    ECG_split.append([pad1, pad2])
+                    ECG_split_label.append(ECG_ALS_label[i])
+
+       
+    print("[INFO] Save preprocessed data to CSV file for record %s..." % record)
+    data = []
+    for i in range(len(ECG_split)):
+        x = list(ECG_split[i][0])
+        x.extend(list(ECG_split[i][1]))
+        x.append(ECG_split_label[i])
+        data.append(x)
+        
+    ECG = pd.DataFrame(data)
+    ECG.to_csv("dataset/NSRDB_%s_sequence_300_pt.csv" % record, index=False, header=False)
+    print("-------------------------- *** --------------------------\n\n")    
+
 def balancing_dataset(record, n_samples): 
     import pandas as pd
     import numpy as np 
@@ -264,32 +431,37 @@ def balancing_dataset(record, n_samples):
     train_df[600]=train_df[600].astype(int)
     equilibre=train_df[600].value_counts()
     
-    print("[INFO] balancing data...")
-    # sampling and resampling dataset
-    random_states = [42, 123]
-    dfs = []
-    for i in range(len(equilibre)):
-        dfs.append(train_df[train_df[600]==i])
-        if(equilibre[i] > n_samples) :
-            dfs[i]=dfs[i].sample(n=n_samples ,random_state=random_states[i])
-        else :
-            dfs[i]=resample(dfs[i],replace=True,n_samples=n_samples,random_state=random_states[i])
-    train_df=pd.concat(dfs)
-    
+    if n_samples != None :
+        print("[INFO] balancing data...")
+        # sampling and resampling dataset
+        random_states = [42, 123]
+        dfs = []
+        for i in range(len(equilibre)):
+            dfs.append(train_df[train_df[600]==i])
+            if(equilibre[i] > n_samples) :
+                dfs[i]=dfs[i].sample(n=n_samples ,random_state=random_states[i])
+            else :
+                dfs[i]=resample(dfs[i],replace=True,n_samples=n_samples,random_state=random_states[i])
+        train_df=pd.concat(dfs)
+    else :
+        print("[INFO] `n_samples` for record %s is None, the data will be left unbalanced..." % record)
+        print(equilibre)
+        
     print("[INFO] save balanced data...")
     train_df.to_csv(dataset_folder + "train_AFDB_%s_balanced.csv" % record, header=None, index=None)
     test_df.to_csv(dataset_folder + "test_AFDB_%s.csv" % record, header=None, index=None)
     print("-------------------------- *** --------------------------\n\n")
 
-def merging_dataset():
+def merging_dataset(n_samples=30000):
     dataset_folder = 'dataset/'
     filenames = []
     for filename in os.listdir(dataset_folder):
-        if filename.find("_AFDB_") > -1:
+        if filename.find("_AFDB_") > -1 or filename.find('NSRDB_') > -1 :
             filenames.append(filename)
-    
+            
     train_dfs = []
     test_dfs = []
+    normal_dfs = []
     print("[INFO] read all balanced dataset...")
     for name in filenames :
         if name.find('train_') > -1:
@@ -298,12 +470,53 @@ def merging_dataset():
         if name.find('test_') > -1:
             test_df = pd.read_csv(dataset_folder + name, header=None)
             test_dfs.append(test_df)
+        if name.find('NSRDB_') > -1:
+            normal_df = pd.read_csv(dataset_folder + name, header=None)
+            normal_dfs.append(normal_df)
         
     print("[INFO] merging all dataset...")
     train_df_all = pd.concat(train_dfs, ignore_index=True)
     test_df_all = pd.concat(test_dfs, ignore_index=True)
+    normal_df_all = pd.concat(normal_dfs, ignore_index=True)
     
-    print("[INFO] save dataset final...")
+    train_df_AF = train_df_all[train_df_all[600] == 0]
+    test_df_AF = test_df_all[test_df_all[600] == 0]
+    normal_df_all[600] = 1
+    
+    df_AF_N = pd.concat([train_df_AF, test_df_AF, normal_df_all])
+    
+    print("[INFO] balancing after merging..")
+    
+    df_AF_N[300]=df_AF_N[600].astype(int)
+    equilibre=df_AF_N[600].value_counts()
+    print("[INFO] sample count before balancing...")
+    print(equilibre)
+    
+    from sklearn.utils import resample
+    random_states = [123, 124]
+    dfs = []
+    for i in range(len(equilibre)):
+        dfs.append(df_AF_N[df_AF_N[600]==i])
+        dfs[i]=resample(dfs[i],replace=True,n_samples=n_samples,random_state=random_states[i])
+    df_AF_N_balanced =pd.concat(dfs)
+
+    df_AF_N_balanced[600]=df_AF_N_balanced[600].astype(int)
+    equilibre=df_AF_N_balanced[600].value_counts()
+    print("[INFO] sample count after balancing...")
+    print(equilibre)
+    
+    print("[INFO] split dataset...")
+    from sklearn.model_selection import train_test_split
+    
+    print("[INFO] save final dataset ...")
+    y = df_AF_N_balanced.iloc[:, 600].values
+    X = df_AF_N_balanced.iloc[:, :600].values
+    
+    X_train, X_test, y_train, y_test = train_test_split(
+                                    X, y, test_size=0.15, random_state=42)
+    
+    train_df_all = pd.DataFrame(np.hstack((X_train, np.expand_dims(y_train, 1))))
+    test_df_all = pd.DataFrame(np.hstack((X_test, np.expand_dims(y_test, 1))))
     train_df_all.to_csv(dataset_folder + "train_all.csv", index=None, header=None)
     test_df_all.to_csv(dataset_folder + "test_all.csv", index=None, header=None)
     print("-------------------------- *** --------------------------\n\n")
@@ -649,7 +862,7 @@ def denoising():
 
     print("-------------------------- *** --------------------------\n\n")
     
-def classification(denoised = 'deep_ae', EPOCHS = 16, BATCH_SIZE = 128):   
+def classification(denoised = 'deep_ae', cv_splits=5, EPOCHS = 16, BATCH_SIZE = 128):   
     fs = 250
     labels = ['AF', 'N']
     dataset_folder = 'dataset/'
@@ -659,6 +872,7 @@ def classification(denoised = 'deep_ae', EPOCHS = 16, BATCH_SIZE = 128):
     from sklearn.metrics import confusion_matrix
     from sklearn.utils import class_weight
     from keras.utils.np_utils import to_categorical
+    from sklearn.model_selection import StratifiedKFold
 
     print("[INFO] load final %s dataset ..." % denoised)
     train_df = []
@@ -676,19 +890,21 @@ def classification(denoised = 'deep_ae', EPOCHS = 16, BATCH_SIZE = 128):
         test_df = pd.read_csv(dataset_folder + "test_all_LSTM_AE.csv", header=None)
 
 
-    target_train = train_df[600]
-    target_test = test_df[600]
-    y_train=to_categorical(target_train)
-    y_test=to_categorical(target_test)
+    ecg_df = pd.concat([train_df, test_df])
+    ecg_df[600]=ecg_df[600].astype(int)
+    equilibre=ecg_df[600].value_counts()
+    print("[INFO] number of samples...")
+    print(equilibre, "\n")
     
-    X_train=train_df.iloc[:,:600].values
-    X_test=test_df.iloc[:,:600].values
-
-    X_train = X_train.reshape(len(X_train), X_train.shape[1],1)
-    X_test = X_test.reshape(len(X_test), X_test.shape[1],1)
+    target_train = ecg_df[600]
+    y = target_train
+    X = ecg_df.iloc[:,:600].values
     
+    kf = StratifiedKFold(n_splits = cv_splits, random_state = 7, shuffle = True)
 
-    print("[INFO] build model...")
+    print("\n\n")
+    print("[INFO] ---------- Classification CNN ---------------")     
+    print("[INFO] build model ...")
     from keras.models import Sequential
     from keras.layers import Dense, Conv1D, MaxPool1D, Flatten, Dropout
     from keras.layers import Input
@@ -744,9 +960,10 @@ def classification(denoised = 'deep_ae', EPOCHS = 16, BATCH_SIZE = 128):
 
         return model
     
-    def check_model(model_, x, y, x_val, y_val, epochs_, batch_size_):
+    def check_model(model_, x, y, x_val, y_val, epochs_, batch_size_, fold_var):
         callbacks = [EarlyStopping(monitor='val_loss', patience=8),
-                     ModelCheckpoint(filepath='best_model.h5', monitor='val_loss', save_best_only=True)]
+                         ModelCheckpoint(filepath='best_model_cv%d.h5' % fold_var, 
+                                         monitor='val_loss', save_best_only=True, mode='min')]
 
         hist = model_.fit(x, 
                           y,
@@ -758,87 +975,127 @@ def classification(denoised = 'deep_ae', EPOCHS = 16, BATCH_SIZE = 128):
         model_.load_weights('best_model.h5')
         return hist 
     
-    print("[INFO] Train model...")
-    max_len = X_train.shape[1]  
-    model = cnn_model(max_len)
-    history=check_model(model, X_train,y_train,X_test,y_test, EPOCHS, BATCH_SIZE)
-    
-    model.save("CNN_Classification_model_%s.h5" % denoised)
-    pd.DataFrame.from_dict(history.history).to_csv('history_train_classif_cnn_denoising_%s.csv' % denoised,index=False) 
-    
-    print("[INFO] evaluate model...")    
-    # predict test data
-    y_pred=model.predict(X_test)
+    fold_var = 1
+    n_samples = len(y)
+    for train_index, val_index in kf.split(np.zeros(n_samples), y):
+        print("\n")
+        print("[INFO] Train model... cv %d" % fold_var)
+        print("\n")
+        
+        X_train = X[train_index] 
+        X_test = X[val_index]
+        y_ = to_categorical(y)
+        y_train = y_[train_index]
+        y_test = y_[val_index]
 
-    # Compute confusion matrix
-    cnf_matrix = confusion_matrix(y_test.argmax(axis=1), y_pred.argmax(axis=1))
-    print("Confusion Matrix :", cnf_matrix)
-    
-    # print classification recport
-    print("Classification Report :",
-          classification_report(y_test.argmax(axis=1), 
-                            y_pred.argmax(axis=1), 
-                            target_names=['AF', 'N']))
+        X_train = X_train.reshape(len(X_train), X_train.shape[1],1)
+        X_test = X_test.reshape(len(X_test), X_test.shape[1],1)
+        
+        max_len = X_train.shape[1]  
+        model = cnn_model(max_len)
+        history=check_model(model, X_train,y_train,X_test,y_test, EPOCHS, BATCH_SIZE, fold_var)
+
+        #model.save("CNN_Classification_model_%s.h5" % denoised)
+        shutil.copy('best_model_cv%d.h5' % fold_var , "CNN_Classification_model_%s.h5" % denoised)
+        pd.DataFrame.from_dict(history.history).to_csv('history_train_classif_cnn_denoising_%s_cv%d.csv' % 
+                                                       (denoised, fold_var) ,index=False) 
+
+        print("\n")
+        print("[INFO] evaluate model - cv %d..." % fold_var) 
+        print("\n")   
+        # predict test data
+        y_pred=model.predict(X_test)
+
+        # Compute confusion matrix
+        cnf_matrix = confusion_matrix(y_test.argmax(axis=1), y_pred.argmax(axis=1))
+        print("Confusion Matrix - cv %d : \n" % fold_var, cnf_matrix)
+        with open("confusion matrix - %s - cv%d.txt" % ('cnn - %s' % denoised, fold_var), 'w') as f:
+            f.write(np.array2string(cnf_matrix, separator=', '))
+
+        # print classification recport
+        cr = classification_report(y_test.argmax(axis=1), 
+                                y_pred.argmax(axis=1), 
+                                target_names=['AF', 'N'])
+        print("Classification Report - cv %d: \n" % fold_var, cr)
+        with open("classification report - %s - cv%d.txt" % ('cnn - %s' % denoised, fold_var), 'w') as f:
+            f.write(cr)
+
+        # clear session             
+        keras.backend.clear_session()
+        fold_var += 1
     print("-------------------------- *** --------------------------\n\n")
     
 if __name__ == "__main__" :
     records = {
-        "04015" : [1, 8, 400, ';'],
-        "04043" : [1, 16, 1000, ';'],
-        "04048" : [1, 6, 900, ';'],
+        "04015" : [1, None, None, ';'], #8, 400
+        "04043" : [1, None, None, ';'], #16, 1000
+        "04048" : [1, None, None, ';'], #6, 900
         "04126" : [1, None, None, ';'],
+        "04746" : [1, None, None, ';'],
         "04908" : [1, None, None, ';'],
-        "04936" : [4, None, 2000, ';'],
-        "05091" : [1, None, 1000, ';'],
-        "05121" : [1, None, 1000, ';'],
-        "05261" : [1, 18, 1000, ';'],
-        "06426" : [1, None, 2000, ';'],
-        "06453" : [1, None, 300, ';'],
-        "06995" : [1, None, 900, ';'],
-        "07910" : [1, 10, 320, ';'],
-        "08215" : [1, None, 400, ';'],
-        "08219" : [1, None, 5000, ';'],
-        "08378" : [5, None, 220, ';'],
-        "08455" : [1, None, 90, ';'],
+        "04936" : [4, None, None, ';'], #4, 2000
+        "05091" : [1, None, None, ';'], #1000
+        "05121" : [1, None, None, ';'], #1000
+        "05261" : [1, None, None, ';'], #18, 1000
+        "06426" : [1, None, None, ';'], #2000
+        "06453" : [1, None, None, ';'], #300
+        "06995" : [1, None, None, ';'], #900
+        "07162" : [1, None, None, ';'],
+        "07859" : [1, None, None, ';'],
+        "07879" : [1, None, None, ';'],
+        "07910" : [1, None, None, ';'], #10, 320
+        "08215" : [1, None, None, ';'], #400
+        "08219" : [5, None, None, ';'], #5, 5000
+        "08378" : [1, None, None, ';'], #220
+        "08405" : [1, None, None, ';'],
+        "08434" : [1, None, None, ';'],
+        "08455" : [1, None, None, ';'], #90
     }
     
-    print("============================ *** ============================")
-    print("=                   PREPROCESSING DATASET                   =") 
-    print("============================ *** ============================")
-    for record in records :
-        print("[INFO] processing recod %s..." % record)
-        start = records[record][0]
-        stop = records[record][1]
-        separator = records[record][3]
-        preprocessing_AFDB(record, start=start, stop=stop, sep=separator, fs=250)
+#     print("============================ *** ============================")
+#     print("=                 PREPROCESSING DATASET AFDB                =") 
+#     print("============================ *** ============================")
+#     for record in records :
+#         print("[INFO] processing recod %s..." % record)
+#         start = records[record][0]
+#         stop = records[record][1]
+#         separator = records[record][3]
+#         preprocessing_AFDB(record, start=start, stop=stop, sep=separator, fs=250)
+     
+#     print("============================ *** ============================")
+#     print("=                PREPROCESSING DATASET NSRDB                =") 
+#     print("============================ *** ============================")
+#     nsrdb_dir = os.listdir("dataset/NSRDB")
+#     for record in nsrdb_dir :
+#         print("[INFO] processing recod %s..." % record)
+#         preprocessing_NSRDB(record)
         
     
-    print("============================ *** ============================")
-    print("=                     BALANCING DATASET                     =") 
-    print("============================ *** ============================")
-    for record in records :
-        n_samples = records[record][2]
-        if n_samples is not None :
-            print("[INFO] balancing dataset recod %s..." % record)
-            balancing_dataset(record, n_samples)
+#     print("============================ *** ============================")
+#     print("=               BALANCING PER-RECORD DATASET                =") 
+#     print("============================ *** ============================")
+#     for record in records :
+#         n_samples = records[record][2]
+#         print("[INFO] balancing dataset recod %s..." % record)
+#         balancing_dataset(record, n_samples)
 
 
-    print("============================ *** ============================")    
-    print("=                      MERGING DATASET                      =") 
-    print("============================ *** ============================") 
-    merging_dataset()
+#     print("============================ *** ============================")    
+#     print("=                      MERGING DATASET                      =") 
+#     print("============================ *** ============================") 
+#     merging_dataset(n_samples=30000)
     
     
-    print("============================ *** ============================") 
-    print("=                         DENOISING                         =") 
-    print("============================ *** ============================") 
-    denoising()
+#     print("============================ *** ============================") 
+#     print("=                         DENOISING                         =") 
+#     print("============================ *** ============================") 
+#     denoising()
 
     
     print("============================ *** ============================") 
     print("=                      CLASSIFICATION                       =") 
     print("============================ *** ============================") 
     # isi dengan 'deep_ae', 'conv_ae', 'lstm_ae' untuk memilih sumber dataset dari hasil denoising tsb.
-    classification(denoised = 'deep_ae', EPOCHS = 16, BATCH_SIZE = 128)
-    classification(denoised = 'conv_ae', EPOCHS = 16, BATCH_SIZE = 128)
-    classification(denoised = 'lstm_ae', EPOCHS = 16, BATCH_SIZE = 128)
+#    classification(denoised = 'deep_ae', EPOCHS = 16, BATCH_SIZE = 128)
+    classification(denoised = 'conv_ae', EPOCHS = 1, BATCH_SIZE = 128)
+#     classification(denoised = 'lstm_ae', EPOCHS = 16, BATCH_SIZE = 128)
