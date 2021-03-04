@@ -58,7 +58,6 @@ def preprocessing_AFDB(record, start=1, stop=None, sep=",", fs=250):
         df.set_index("Time", inplace=True)
         return df
 
-
     # - concate datafarame
     list_df_ecg = []
     for name in csv_filenames:
@@ -66,6 +65,7 @@ def preprocessing_AFDB(record, start=1, stop=None, sep=",", fs=250):
         list_df_ecg.append(df)
 
     df_ecg = pd.concat(list_df_ecg)
+    label_idx.append([str(df_ecg.index[-1].time()), ''])
 
     # - Split Normal (N) and AFIB data
     N_range = []
@@ -1027,29 +1027,29 @@ def classification(denoised = 'deep_ae', cv_splits=5, EPOCHS = 16, BATCH_SIZE = 
     
 if __name__ == "__main__" :
     records = {
-        "04015" : [1, None, None, ';'], #8, 400
-        "04043" : [1, None, None, ';'], #16, 1000
-        "04048" : [1, None, None, ';'], #6, 900
-        "04126" : [1, None, None, ';'],
-        "04746" : [1, None, None, ';'],
-        "04908" : [1, None, None, ';'],
-        "04936" : [4, None, None, ';'], #4, 2000
-        "05091" : [1, None, None, ';'], #1000
-        "05121" : [1, None, None, ';'], #1000
-        "05261" : [1, None, None, ';'], #18, 1000
-        "06426" : [1, None, None, ';'], #2000
-        "06453" : [1, None, None, ';'], #300
-        "06995" : [1, None, None, ';'], #900
+#         "04015" : [1, None, None, ';'], #8, 400
+#         "04043" : [1, None, None, ';'], #16, 1000
+#         "04048" : [1, None, None, ';'], #6, 900
+#         "04126" : [1, None, None, ';'],
+#         "04746" : [1, None, None, ';'],
+#         "04908" : [1, None, None, ';'],
+#         "04936" : [4, None, None, ';'], #4, 2000
+#         "05091" : [1, None, None, ';'], #1000
+#         "05121" : [1, None, None, ';'], #1000
+#         "05261" : [1, None, None, ';'], #18, 1000
+#         "06426" : [1, None, None, ';'], #2000
+#         "06453" : [1, None, None, ';'], #300
+#         "06995" : [1, None, None, ';'], #900
         "07162" : [1, None, None, ';'],
         "07859" : [1, None, None, ';'],
-        "07879" : [1, None, None, ';'],
-        "07910" : [1, None, None, ';'], #10, 320
-        "08215" : [1, None, None, ';'], #400
-        "08219" : [5, None, None, ';'], #5, 5000
-        "08378" : [1, None, None, ';'], #220
-        "08405" : [1, None, None, ';'],
-        "08434" : [1, None, None, ';'],
-        "08455" : [1, None, None, ';'], #90
+#         "07879" : [1, None, None, ';'],
+#         "07910" : [1, None, None, ';'], #10, 320
+#         "08215" : [1, None, None, ';'], #400
+#         "08219" : [5, None, None, ';'], #5, 5000
+#         "08378" : [1, None, None, ';'], #220
+#         "08405" : [1, None, None, ';'],
+#         "08434" : [1, None, None, ';'],
+#         "08455" : [1, None, None, ';'], #90
     }
     
     print("============================ *** ============================")
@@ -1061,41 +1061,42 @@ if __name__ == "__main__" :
         stop = records[record][1]
         separator = records[record][3]
         preprocessing_AFDB(record, start=start, stop=stop, sep=separator, fs=250)
-     
-    print("============================ *** ============================")
-    print("=                PREPROCESSING DATASET NSRDB                =") 
-    print("============================ *** ============================")
-    nsrdb_dir = os.listdir("dataset/NSRDB")
-    for record in nsrdb_dir :
-        print("[INFO] processing recod %s..." % record)
-        preprocessing_NSRDB(record)
+        
+        
+#     print("============================ *** ============================")
+#     print("=                PREPROCESSING DATASET NSRDB                =") 
+#     print("============================ *** ============================")
+#     nsrdb_dir = os.listdir("dataset/NSRDB")
+#     for record in nsrdb_dir :
+#         print("[INFO] processing recod %s..." % record)
+#         preprocessing_NSRDB(record)
         
     
-    print("============================ *** ============================")
-    print("=               BALANCING PER-RECORD DATASET                =") 
-    print("============================ *** ============================")
-    for record in records :
-        n_samples = records[record][2]
-        print("[INFO] balancing dataset recod %s..." % record)
-        balancing_dataset(record, n_samples)
+#     print("============================ *** ============================")
+#     print("=               BALANCING PER-RECORD DATASET                =") 
+#     print("============================ *** ============================")
+#     for record in records :
+#         n_samples = records[record][2]
+#         print("[INFO] balancing dataset recod %s..." % record)
+#         balancing_dataset(record, n_samples)
 
 
-    print("============================ *** ============================")    
-    print("=                      MERGING DATASET                      =") 
-    print("============================ *** ============================") 
-    merging_dataset(n_samples=30000)
+#     print("============================ *** ============================")    
+#     print("=                      MERGING DATASET                      =") 
+#     print("============================ *** ============================") 
+#     merging_dataset(n_samples=30000)
     
     
-    print("============================ *** ============================") 
-    print("=                         DENOISING                         =") 
-    print("============================ *** ============================") 
-    denoising()
+#     print("============================ *** ============================") 
+#     print("=                         DENOISING                         =") 
+#     print("============================ *** ============================") 
+#     denoising()
 
     
-    print("============================ *** ============================") 
-    print("=                      CLASSIFICATION                       =") 
-    print("============================ *** ============================") 
-    # isi dengan 'deep_ae', 'conv_ae', 'lstm_ae' untuk memilih sumber dataset dari hasil denoising tsb.
-    classification(denoised = 'deep_ae', EPOCHS = 16, BATCH_SIZE = 128)
-    classification(denoised = 'conv_ae', EPOCHS = 16, BATCH_SIZE = 128)
-    classification(denoised = 'lstm_ae', EPOCHS = 16, BATCH_SIZE = 128)
+#     print("============================ *** ============================") 
+#     print("=                      CLASSIFICATION                       =") 
+#     print("============================ *** ============================") 
+#     # isi dengan 'deep_ae', 'conv_ae', 'lstm_ae' untuk memilih sumber dataset dari hasil denoising tsb.
+#     classification(denoised = 'deep_ae', EPOCHS = 16, BATCH_SIZE = 128)
+#     classification(denoised = 'conv_ae', EPOCHS = 16, BATCH_SIZE = 128)
+#     classification(denoised = 'lstm_ae', EPOCHS = 16, BATCH_SIZE = 128)

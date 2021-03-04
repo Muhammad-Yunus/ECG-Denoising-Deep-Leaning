@@ -11,3 +11,5 @@ dataset/test_all-v2.csv
 dataset/train_all-v2.csv
 dataset_split_per_class/*
 *.h5
+*.csv
+*.txt
