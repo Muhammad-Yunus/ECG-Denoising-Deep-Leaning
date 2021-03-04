@@ -972,7 +972,7 @@ def classification(denoised = 'deep_ae', cv_splits=5, EPOCHS = 16, BATCH_SIZE = 
                           batch_size=batch_size_,
                           shuffle=True,
                           validation_data=(x_val,y_val))
-        model_.load_weights('best_model.h5')
+        model_.load_weights('best_model_cv%d.h5' % fold_var)
         return hist 
     
     fold_var = 1
